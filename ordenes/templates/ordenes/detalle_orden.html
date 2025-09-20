@@ -1,0 +1,89 @@
+{% extends 'ordenes/base.html' %}
+
+{% block content %}
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Detalle de la Orden #{{ orden.id }}</h4>
+            <span class="badge rounded-pill 
+                {% if orden.estado == 'PENDIENTE' %} text-bg-warning
+                {% elif orden.estado == 'EN_PROCESO' %} text-bg-info
+                {% else %} text-bg-success {% endif %}">
+                {{ orden.estado }}
+            </span>
+        </div>
+        <div class="card-body">
+            <h5 class="card-title">Cliente: {{ orden.cliente_nombre }}</h5>
+            <h6 class="card-subtitle mb-3 text-muted">Vehículo: {{ orden.vehiculo }}</h6>
+            
+            <p><strong>Teléfono:</strong> {{ orden.cliente_telefono }}</p>
+            <p><strong>Fecha de Creación:</strong> {{ orden.fecha_creacion }}</p>
+            
+            <p><strong>Descripción del Servicio:</strong></p>
+            <div class="p-3 bg-body-tertiary rounded">
+                <pre class="mb-0">{{ orden.descripcion_servicio }}</pre>
+            </div>
+
+            <hr>
+            <h5 class="card-title mt-4">Registro de Viaje</h5>
+            {% if not orden.latitud_inicio %}
+                <p>No se ha iniciado un viaje para esta orden.</p>
+                <form id="form-viaje" method="post" action="{% url 'registrar_viaje' orden.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="iniciar">
+                    <button type="submit" class="btn btn-success">Iniciar Viaje</button>
+                </form>
+            {% elif not orden.latitud_fin %}
+                <p>Viaje en progreso...</p>
+                <form id="form-viaje" method="post" action="{% url 'registrar_viaje' orden.id %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="finalizar">
+                    <button type="submit" class="btn btn-danger">Finalizar Viaje</button>
+                </form>
+            {% else %}
+                <p>El viaje para esta orden ha sido completado.</p>
+                {% if orden.millaje_recorrido is not None %}
+                <p><strong>Millaje Recorrido:</strong> {{ orden.millaje_recorrido }} millas.</p>
+                {% endif %}
+            {% endif %}
+        </div>
+        <div class="card-footer text-end">
+            <a href="{% url 'editar_orden' orden.id %}" class="btn btn-secondary">Editar</a>
+            <a href="{% url 'eliminar_orden' orden.id %}" class="btn btn-danger">Eliminar</a>
+        </div>
+    </div>
+
+    <script>
+        const formViaje = document.getElementById('form-viaje');
+
+        if (formViaje) {
+            formViaje.addEventListener('submit', function(event) {
+                event.preventDefault();
+                
+                alert('Obteniendo ubicación GPS... Por favor, acepta el permiso en tu navegador.');
+
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+
+                    const latInput = document.createElement('input');
+                    latInput.type = 'hidden';
+                    latInput.name = 'latitud';
+                    latInput.value = lat;
+
+                    const lonInput = document.createElement('input');
+                    lonInput.type = 'hidden';
+                    lonInput.name = 'longitud';
+                    lonInput.value = lon;
+
+                    formViaje.appendChild(latInput);
+                    formViaje.appendChild(lonInput);
+
+                    formViaje.submit();
+
+                }, function(error) {
+                    alert('Error al obtener la ubicación: ' + error.message);
+                });
+            });
+        }
+    </script>
+{% endblock %}
